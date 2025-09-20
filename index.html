@@ -1,0 +1,171 @@
+<!doctype html><html lang=en><head>
+<meta charset=utf-8><title>Moisture Tester v2</title>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel=manifest href=manifest.json><link rel=apple-touch-icon href=apple-touch-icon.png>
+<meta name=apple-mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=theme-color content=#0b5f2c>
+<style>
+:root{--green:#0a7d32;--pad:14px}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:#f5f6f7;color:#111}
+header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:10px var(--pad);z-index:10;display:flex;align-items:center;gap:10px}
+header h1{margin:0;font-size:18px;flex:1}
+main{max-width:900px;margin:0 auto;padding:12px var(--pad) 96px}
+fieldset{border:1px solid #ddd;border-radius:12px;background:#fff;margin:12px 0;padding:10px}legend{font-weight:600;padding:0 8px}
+label{display:block;font-size:14px;margin:8px 0 6px}
+input,select,textarea{width:100%;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;background:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{display:block;width:100%;padding:12px;font-size:16px;margin:8px 0 0;border:0;border-radius:12px;color:#fff;background:var(--green)}
+.card{background:#fff;border:1px solid #e7e7e7;border-radius:12px;padding:12px}
+.muted{color:#555;font-size:13px;line-height:1.35}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef3ee;border:1px solid #d5e6d6;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #eee;padding:6px 8px;text-align:left}
+footer{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e5e5e5;padding:8px var(--pad);font-size:12px;color:#666}
+.small{font-size:12px;color:#666}
+</style></head><body>
+<header><h1>Moisture Tester v2</h1></header>
+<main>
+<fieldset><legend>Meter & Crop</legend>
+<div class=row3>
+<div><label>Meter</label><select id=meter>
+<option value=919 selected>919 (3.5&quot; cup)</option>
+<option value=minigac>Mini‑GAC</option>
+<option value=gac2100>Dickey‑John GAC 2100</option>
+</select></div>
+<div><label>Crop</label><select id=crop>
+<option value=oats selected>Oats</option><option value=wheat>Wheat</option><option value=barley>Barley</option>
+<option value=canola>Canola</option><option value=corn>Corn</option><option value=soybeans>Soybeans</option>
+<option value=rye>Rye</option><option value=flax>Flax</option>
+</select></div>
+<div><label>Sample size (grams) <span class=small>(auto-fills from defaults; you can override)</span></label><input id=grams type=number step=1 placeholder="from manual"></div>
+</div>
+</fieldset>
+
+<fieldset><legend>Inputs</legend>
+<div class=row3>
+<div><label>Meter reading</label><input id=reading type=number step=0.1 inputmode=decimal placeholder="e.g. 20.0"></div>
+<div><label>Grain temperature</label><div class=row>
+  <select id=tempUnit><option value=C selected>°C</option><option value=F>°F</option></select>
+  <input id=tempVal type=number step=0.1 inputmode=decimal placeholder="e.g. 41">
+</div></div>
+<div><label>&nbsp;</label><button class=btn id=go>Calculate</button></div>
+</div>
+<div id=err class=muted style="color:#b00020;margin-top:6px"></div>
+</fieldset>
+
+<fieldset><legend>Result</legend>
+<div id=result class=card><span class=muted>Enter a meter reading & temperature, then tap <b>Calculate</b>.</span></div>
+<div id=notes class=muted style="margin-top:8px;"></div>
+</fieldset>
+
+<fieldset><legend>Calibration (per meter + crop)</legend>
+<div class=row>
+  <div><label>Reference (lab) moisture %</label><input id=ref type=number step=0.1 inputmode=decimal></div>
+  <div><label>Calculated moisture %</label><input id=calc type=number step=0.1 inputmode=decimal disabled></div>
+</div>
+<div class=row>
+  <button class=btn id=saveBias>Save calibration bias</button>
+  <button class=btn id=saveGrams>Save sample grams</button>
+</div>
+<div id=status class=muted style="margin-top:6px"></div>
+</fieldset>
+
+<details><summary>Advanced (edit crop preset)</summary>
+<div class=row3>
+  <div><label>Base meter @20°C</label><input id=baseMeter type=number step=0.1></div>
+  <div><label>Base moisture @20°C (%)</label><input id=baseMoist type=number step=0.1></div>
+  <div><label>Meter slope (%/meter)</label><input id=meterSlope type=number step=0.01></div>
+</div>
+<div class=row>
+  <div><label>Temp slope (% per °C)</label><input id=tempSlope type=number step=0.01></div>
+  <div><label>&nbsp;</label><button class=btn id=advSave>Save to this crop</button></div>
+</div>
+<div class=muted>Defaults are a starting point; refine with your own checks.</div>
+</details>
+
+<fieldset><legend>Logs</legend>
+<div class=row>
+  <button class=btn id=logRefresh>Refresh</button>
+  <button class=btn id=logExport>Export CSV</button>
+  <button class=btn id=logClear>Clear logs</button>
+</div>
+<div id=logTable style="margin-top:8px"></div>
+</fieldset>
+
+</main>
+<footer>Works offline after first load. Calibrations & logs are saved on‑device.</footer>
+
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js');}
+function jget(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}}function jset(k,v){localStorage.setItem(k,JSON.stringify(v))}
+
+// Presets and default grams
+const presets={
+  oats:{baseMeter:25,baseMoist:16.6,meterSlope:.20,tempSlope:-.10},
+  wheat:{baseMeter:24,baseMoist:15.5,meterSlope:.18,tempSlope:-.07},
+  barley:{baseMeter:24.5,baseMoist:15.8,meterSlope:.19,tempSlope:-.08},
+  canola:{baseMeter:28,baseMoist:8.5,meterSlope:.15,tempSlope:-.06},
+  corn:{baseMeter:18,baseMoist:15,meterSlope:.22,tempSlope:-.14},
+  soybeans:{baseMeter:18.5,baseMoist:12.5,meterSlope:.20,tempSlope:-.10},
+  rye:{baseMeter:24,baseMoist:14.5,meterSlope:.18,tempSlope:-.07},
+  flax:{baseMeter:30,baseMoist:9,meterSlope:.14,tempSlope:-.06}
+};
+const gramsDefault={
+  barley:225,
+  oats:200,
+  wheat:250,
+  canola:250,
+  flax:225,
+  soybeans:225,
+  corn:250,   // defaulted (can change if you prefer)
+  rye:250     // defaulted (can change if you prefer)
+};
+
+function key(){return (meter.value||'919')+'::'+(crop.value||'oats')}
+function loadPresetIntoUI(){
+  const p=presets[crop.value];
+  baseMeter.value=p.baseMeter;baseMoist.value=p.baseMoist;meterSlope.value=p.meterSlope;tempSlope.value=p.tempSlope;
+  const saved=(jget('grams',{})[key()]);  // user override
+  grams.value = (saved!==undefined && saved!=="") ? saved : (gramsDefault[crop.value]??"");
+}
+meter.onchange=loadPresetIntoUI;crop.onchange=loadPresetIntoUI;window.addEventListener('DOMContentLoaded',loadPresetIntoUI);
+
+function addLog(e){const logs=jget('logs',[]);logs.unshift({ts:new Date().toISOString(),...e});jset('logs',logs)}
+function renderLogs(){const logs=jget('logs',[]);if(!logs.length){logTable.innerHTML='<div class=muted>No logs yet.</div>';return;}const cols=Array.from(new Set(logs.flatMap(o=>Object.keys(o))));let html='<div class=card style="overflow:auto"><table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';for(const r of logs){html+='<tr>'+cols.map(c=>`<td>${(r[c]??'')}</td>`).join('')+'</tr>'}html+='</tbody></table></div>';logTable.innerHTML=html}
+logRefresh.onclick=renderLogs;logClear.onclick=()=>{jset('logs',[]);renderLogs()};logExport.onclick=()=>{const logs=jget('logs',[]);if(!logs.length){alert('No logs');return;}const cols=Array.from(new Set(logs.flatMap(o=>Object.keys(o))));const rows=[cols.join(',')].concat(logs.map(r=>cols.map(c=>JSON.stringify(r[c]??"")).join(',')));const csv=rows.join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='moisture_tester_logs.csv';a.click();}
+
+go.onclick=()=>{
+  err.textContent="";
+  const mr=parseFloat(reading.value);let t=parseFloat(tempVal.value);
+  if(tempUnit.value==='F'){t=(t-32)*5/9;}
+  if(isNaN(mr)||isNaN(t)){err.textContent="Enter meter and temperature.";return;}
+  const p=presets[crop.value];
+  const M20=p.baseMoist+(mr-p.baseMeter)*p.meterSlope;
+  const MT=M20+(t-20)*p.tempSlope;
+  const bias=(jget('bias',{})[key()]||0);
+  const final=MT+bias;
+  result.innerHTML=`<p><span class=pill>Corrected moisture</span><br><b>${final.toFixed(1)}%</b></p><p class=muted>Base@20 °C: ${M20.toFixed(1)}% • Bias: ${bias>0?"+":""}${bias.toFixed(1)}%</p>`;
+  calc.value=final.toFixed(1);
+  const gtxt = grams.value || (gramsDefault[crop.value]??"");
+  notes.textContent = gtxt ? ('Sample: '+gtxt+' g') : '(Set grams per manual.)';
+  addLog({tool:'moist', meter:meter.value, crop:crop.value, reading:mr, tempC:t, corrected:final, grams:gtxt});
+};
+
+saveBias.onclick=()=>{
+  const refV=parseFloat(ref.value),calcV=parseFloat(calc.value);
+  if(!(refV>0)||!(calcV>0)){status.textContent="Calculate first, then enter reference.";return;}
+  const store=jget('bias',{});const old=store[key()]||0;const nb=.7*(refV-calcV)+.3*old;store[key()]=nb;jset('bias',store);
+  status.textContent=`Saved bias for ${key()}: ${(nb>0?"+":"")}${nb.toFixed(2)}%`;setTimeout(()=>status.textContent="",2500);
+  addLog({tool:'moist_cal',key:key(),bias:nb});
+};
+
+saveGrams.onclick=()=>{
+  const g=jget('grams',{});g[key()]=grams.value;jset('grams',g);
+  status.textContent='Saved grams.';setTimeout(()=>status.textContent="",2000);
+};
+
+advSave.onclick=()=>{
+  const p=presets[crop.value];
+  p.baseMeter=parseFloat(baseMeter.value);p.baseMoist=parseFloat(baseMoist.value);p.meterSlope=parseFloat(meterSlope.value);p.tempSlope=parseFloat(tempSlope.value);
+  status.textContent='Saved crop preset for '+crop.value;setTimeout(()=>status.textContent="",2000);
+};
+</script>
+</body></html>
